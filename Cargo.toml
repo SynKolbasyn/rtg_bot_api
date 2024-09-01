@@ -1,0 +1,17 @@
+[package]
+name = "rtg_bot_api"
+version = "0.0.1"
+edition = "2021"
+authors = ["Andrew Kozmin syn.kolbasyn.06@gmail.com"]
+description = "A project for testing various solutions"
+readme = "README.md"
+homepage = "https://github.com/SynKolbasyn/rtg_bot_api"
+repository = "https://github.com/SynKolbasyn/rtg_bot_api"
+license = "AGPL-3.0-or-later"
+
+[dependencies]
+anyhow = "1.0.86"
+reqwest = { version = "0.12.7", features = ["gzip", "rustls-tls"] }
+serde = { version = "1.0.209", features = ["derive"] }
+serde_json = "1.0.127"
+tokio = { version = "1.40.0", features = ["full"] }

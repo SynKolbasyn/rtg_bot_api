@@ -16,19 +16,19 @@
 
 
 mod tg_api;
+mod parser;
 
 
 use std::collections::HashSet;
 
-use anyhow::{Result, bail, Context};
+use anyhow::{Result, bail};
 use reqwest::Response;
 use select::{
   document::Document,
   node::Node,
-  predicate::Attr,
 };
 
-// use crate::tg_api::{Type, Method};
+use crate::tg_api::{Type, Method};
 
 
 #[tokio::main]
@@ -42,8 +42,9 @@ async fn main() {
 
 async fn main_wraper() -> Result<()> {
   let html: String = get_html().await?;
-  let elements: Vec<Node> = get_list_of_main_tags(&Document::from(html.as_str()))?;
-  // let (types, methods): (HashSet<Type>, HashSet<Method>);
+  let document: Document = Document::from(html.as_str());
+  let tags: Vec<Node> = parser::get_list_of_main_tags(&document)?;
+  let (types, methods): (HashSet<Type>, HashSet<Method>) = parser::parse_api(&tags)?;
 
   Ok(())
 }
@@ -59,26 +60,4 @@ async fn get_html() -> Result<String> {
 
   let html: String = response.text().await?;
   Ok(html)
-}
-
-
-fn get_list_of_main_tags(document: &Document) -> Result<Vec<Node>> {
-  let mut result: Vec<Node> = Vec::new();
-  let necessary_tags: HashSet<&str> = HashSet::from(["h4", "p", "table"]);
-  let document: Node = document.find(Attr("id", "dev_page_content")).next().context("ERROR: Couldn't find the start tag of the data")?;
-
-  for tag in document.children() {
-    let tag_name: &str = match tag.name() {
-      Some(name) => name,
-      None => continue,
-    };
-
-    if !necessary_tags.contains(tag_name) {
-      continue;
-    }
-
-    result.push(tag);
-  }
-
-  Ok(result)
 }

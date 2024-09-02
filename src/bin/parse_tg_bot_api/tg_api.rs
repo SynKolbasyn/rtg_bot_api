@@ -1,0 +1,46 @@
+//!   Rust telegram bot api. The library provides asynchronous access to the telegram bot api.
+//!   Copyright (C) 2024  Andrew Kozmin
+//!
+//!   This program is free software: you can redistribute it and/or modify
+//!   it under the terms of the GNU Affero General Public License as published by
+//!   the Free Software Foundation, either version 3 of the License, or
+//!   (at your option) any later version.
+//!
+//!   This program is distributed in the hope that it will be useful,
+//!   but WITHOUT ANY WARRANTY; without even the implied warranty of
+//!   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//!   GNU Affero General Public License for more details.
+//!
+//!   You should have received a copy of the GNU Affero General Public License
+//!   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+use std::collections::HashSet;
+
+
+pub(crate) struct Type {
+  name: String,
+  fields: HashSet<Field>,
+}
+
+
+pub(crate) struct Method {
+  name: String,
+  description: String,
+  parameters: Vec<Parameter>,
+}
+
+
+pub(crate) struct Field {
+  name: String,
+  r#type: String,
+  description: String,
+}
+
+
+pub(crate) struct Parameter {
+  name: String,
+  r#type: String,
+  required: bool,
+  description: String,
+}

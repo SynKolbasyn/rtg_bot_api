@@ -15,9 +15,9 @@
 //!   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
-use anyhow::{Result, Context};
+use anyhow::{bail, Context, Result};
 use select::{
   document::Document,
   node::Node,
@@ -27,40 +27,29 @@ use select::{
 use crate::tg_api::{Type, Method};
 
 
-pub(crate) struct H4Tag {
-  value: String,
+pub(crate) enum Tag {
+  H4Tag(H4Tag),
+  PTag(PTag),
+  TableTag(TableTag),
 }
 
 
-pub(crate) struct PTag {
-  value: String,
-}
-
-
-pub(crate) struct TableTag {
-  lines: Vec<LineTag>,
-}
-
-
-pub(crate) struct LineTag {
-  value: Vec<String>,
-}
-
-
-pub(crate) fn get_list_of_main_tags(document: &Document) -> Result<Vec<Node>> {
-  let mut result: Vec<Node> = Vec::new();
-  let necessary_tags: HashSet<&str> = HashSet::from(["h4", "p", "table"]);
+pub(crate) fn get_list_of_main_tags(document: &Document) -> Result<Vec<Tag>> {
+  let mut result: Vec<Tag> = Vec::new();
   let document: Node = document.find(Attr("id", "dev_page_content")).next().context("ERROR: Couldn't find the start tag of the data")?;
 
-  for tag in document.children() {
-    let tag_name: &str = match tag.name() {
-      Some(name) => name,
+  for node in document.children() {
+    let node_name: &str = match node.name() {
+      Some(name) => name.trim(),
       None => continue,
     };
 
-    if !necessary_tags.contains(tag_name) {
-      continue;
-    }
+    let tag: Tag = match node_name {
+      "p" => Tag::H4Tag(parse_tag_h4(&node)),
+      "h4" => Tag::PTag(parse_tag_p(&node)),
+      "table" => Tag::TableTag(parse_tag_table(&node)?),
+      _ => continue,
+    };
 
     result.push(tag);
   }
@@ -69,21 +58,170 @@ pub(crate) fn get_list_of_main_tags(document: &Document) -> Result<Vec<Node>> {
 }
 
 
-pub(crate) fn parse_api(tags: &Vec<Node>) -> Result<(HashSet<Type>, HashSet<Method>)> {
+pub(crate) fn parse_api(tags: &Vec<Tag>) -> Result<(HashSet<Type>, HashSet<Method>)> {
   Ok((parse_types(tags)?, parse_methods(tags)?))
 }
 
 
-pub(crate) fn parse_types(tags: &Vec<Node>) -> Result<HashSet<Type>> {
-  for tag in tags {
-    if tag.name()
+pub(crate) struct H4Tag {
+  pub(crate) value: String,
+}
+
+
+impl H4Tag {
+  fn new(value: String) -> Self {
+    Self {
+      value,
+    }
   }
 }
 
 
-pub(crate) fn parse_methods(tags: &Vec<Node>) -> Result<HashSet<Method>> {
+pub(crate) struct PTag {
+  pub(crate) value: String,
+}
+
+
+impl PTag {
+  fn new(value: String) -> Self {
+    Self {
+      value,
+    }
+  }
+}
+
+
+pub(crate) struct TableTag {
+  pub(crate) lines: Vec<LineTag>,
+}
+
+
+impl TableTag {
+  fn new(lines: Vec<LineTag>) -> Self {
+    Self {
+      lines,
+    }
+  }
+}
+
+
+pub(crate) struct LineTag {
+  pub(crate) value: HashMap<String, String>,
+}
+
+
+impl LineTag {
+  fn new(value: HashMap<String, String>) -> Self {
+    Self {
+      value,
+    }
+  }
+}
+
+
+fn parse_tag_h4(node: &Node) -> H4Tag {
+  H4Tag::new(node.text())
+}
+
+
+fn parse_tag_p(node: &Node) -> PTag {
+  PTag::new(node.text())
+}
+
+
+fn parse_tag_table(node: &Node) -> Result<TableTag> {
+  let mut column_names: Vec<String> = Vec::new();
+  let mut lines: Vec<LineTag> = Vec::new();
+
+  for tag in node.children() {
+    let tag_name: &str = match tag.name() {
+      Some(name) => name,
+      None => continue,
+    };
+
+    match tag_name {
+      "thead" => column_names = parse_table_thead(&tag)?,
+      "tbody" => lines = parse_table_tbody(&tag, &column_names)?,
+      _ => (),
+    }
+  }
+
+  Ok(TableTag::new(lines))
+}
+
+
+fn parse_table_thead(node: &Node) -> Result<Vec<String>> {
+  let mut result: Vec<String> = Vec::new();
+
+  for tag in node.children() {
+    let tag_name: &str = match tag.name() {
+      Some(name) => name,
+      None => continue,
+    };
+
+    if tag_name != "tr" {
+      continue;
+    }
+
+    for column in tag.children() {
+      let column_name: &str = match column.name() {
+        Some(name) => name,
+        None => continue,
+      };
+
+      if column_name != "th" {
+        continue;
+      }
+
+      result.push(column.text().trim().to_string());
+    }
+  }
+
+  Ok(result)
+}
+
+
+fn parse_table_tbody(node: &Node, column_name: &Vec<String>) -> Result<Vec<LineTag>> {
+  let mut result: Vec<LineTag> = Vec::new();
+
+  for tag in node.children() {
+    let tag_name: &str = match tag.name() {
+      Some(name) => name,
+      None => continue,
+    };
+
+    if tag_name != "tr" {
+      continue;
+    }
+
+    let mut line: HashMap<String, String> = HashMap::new();
+    let mut idx: usize = 0;
+    for field in tag.children() {
+      let field_name: &str = match field.name() {
+        Some(name) => name,
+        None => continue,
+      };
+
+      if field_name != "td" {
+        continue;
+      }
+
+      line.insert(column_name[idx].clone(), field.text().trim().to_string());
+      idx += 1;
+    }
+
+    result.push(LineTag::new(line));
+  }
+
+  Ok(result)
+}
+
+
+fn parse_types(tags: &Vec<Tag>) -> Result<HashSet<Type>> {
   Ok(HashSet::new())
 }
 
 
-
+fn parse_methods(tags: &Vec<Tag>) -> Result<HashSet<Method>> {
+  Ok(HashSet::new())
+}

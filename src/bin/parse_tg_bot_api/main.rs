@@ -29,6 +29,7 @@ use select::{
 };
 
 use crate::tg_api::{Type, Method};
+use crate::parser::Tag;
 
 
 #[tokio::main]
@@ -43,8 +44,20 @@ async fn main() {
 async fn main_wraper() -> Result<()> {
   let html: String = get_html().await?;
   let document: Document = Document::from(html.as_str());
-  let tags: Vec<Node> = parser::get_list_of_main_tags(&document)?;
+  let tags: Vec<Tag> = parser::get_list_of_main_tags(&document)?;
   let (types, methods): (HashSet<Type>, HashSet<Method>) = parser::parse_api(&tags)?;
+
+  for i in tags {
+    match i {
+      Tag::H4Tag(tag) => println!("{:?}", tag.value),
+      Tag::PTag(tag) => println!("{:?}", tag.value),
+      Tag::TableTag(tag) => {
+        for line in tag.lines {
+          println!("{:?}", line.value);
+        }
+      },
+    }
+  }
 
   Ok(())
 }

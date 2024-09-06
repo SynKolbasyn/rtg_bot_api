@@ -11,6 +11,7 @@ license = "AGPL-3.0-or-later"
 
 [dependencies]
 anyhow = "1.0.86"
+rayon = "1.10.0"
 reqwest = { version = "0.12.7", features = ["gzip", "rustls-tls"] }
 select = "0.6.0"
 serde = { version = "1.0.209", features = ["derive"] }

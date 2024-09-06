@@ -23,13 +23,10 @@ use std::collections::HashSet;
 
 use anyhow::{Result, bail};
 use reqwest::Response;
-use select::{
-  document::Document,
-  node::Node,
-};
+use select::document::Document;
 
 use crate::tg_api::{Type, Method};
-use crate::parser::Tag;
+use crate::parser::{Tag, LineTag};
 
 
 #[tokio::main]
@@ -51,11 +48,14 @@ async fn main_wraper() -> Result<()> {
     match i {
       Tag::H4Tag(tag) => println!("{:?}", tag.value),
       Tag::PTag(tag) => println!("{:?}", tag.value),
-      Tag::TableTag(tag) => {
-        for line in tag.lines {
-          println!("{:?}", line.value);
-        }
-      },
+      Tag::TableTag(tag) => tag.lines.iter().for_each(|line: &LineTag| println!("{:?}", line.value)),
+      Tag::UlTag(tag) => println!("{:?}", tag.list_items),
+    }
+  }
+
+  for i in types {
+    for j in i.fields {
+      println!("{:?}", j)
     }
   }
 

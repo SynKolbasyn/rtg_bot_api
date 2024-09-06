@@ -15,32 +15,59 @@
 //!   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub(crate) struct Type {
-  name: String,
-  fields: HashSet<Field>,
+  pub(crate) name: String,
+  pub(crate) description: String,
+  pub(crate) fields: BTreeSet<Field>,
+}
+
+
+impl Type {
+  pub(crate) fn new(name: String, description: String, fields: BTreeSet<Field>) -> Self {
+    Self {
+      name,
+      description,
+      fields,
+    }
+  }
 }
 
 
 pub(crate) struct Method {
-  name: String,
-  description: String,
-  parameters: Vec<Parameter>,
+  pub(crate) name: String,
+  pub(crate) description: String,
+  pub(crate) parameters: Vec<Parameter>,
 }
 
 
+#[derive(Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub(crate) struct Field {
-  name: String,
-  r#type: String,
-  description: String,
+  pub(crate) name: String,
+  pub(crate) r#type: String,
+  pub(crate) optional: bool,
+  pub(crate) description: String,
+}
+
+
+impl Field {
+  pub(crate) fn new(name: String, r#type: String, optional: bool, description: String) -> Self {
+    Self {
+      name,
+      r#type,
+      optional,
+      description,
+    }
+  }
 }
 
 
 pub(crate) struct Parameter {
-  name: String,
-  r#type: String,
-  required: bool,
-  description: String,
+  pub(crate) name: String,
+  pub(crate) r#type: String,
+  pub(crate) required: bool,
+  pub(crate) description: String,
 }
